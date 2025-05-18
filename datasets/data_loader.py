@@ -814,3 +814,22 @@ def load_parkinson(X_y=True):
         )
     else:
         return df
+
+def load_gametes(epistatic_variables: int=2,number_variables: int=100, noise_ratio: float=0.1 ,  X_y=True):
+    
+    filename = f"{epistatic_variables}w_{number_variables}a_{noise_ratio}her.csv"
+    
+    df = pd.read_csv(
+        os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "data",
+            filename,
+        )
+    )
+    if X_y:
+        return (
+            torch.from_numpy(df.values[:, :-1]).float(),
+            torch.from_numpy(df.values[:, -1]).float(),
+        )
+    else:
+        return df
