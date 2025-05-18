@@ -242,11 +242,11 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
 
 
 if __name__ == "__main__":
-    from nslug.datasets.data_loader import load_parkinson
+    from nslug.datasets.data_loader import load_parkinson,load_gametes
     from nslug.utils.utils import train_test_split
 
-    X, y = load_parkinson(X_y=True)
-
+   # X, y = load_parkinson(X_y=True)
+    X, y = load_gametes(2,10,0.4,X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(X, y, p_test=0.4)
     X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, p_test=0.5)
 
