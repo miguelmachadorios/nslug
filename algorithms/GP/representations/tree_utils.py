@@ -180,9 +180,9 @@ def create_random_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
     
     if random.random()<0.5:
         
-        node=create_grow_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
+        node=create_grow_random_tree(random_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
     else:
-        node=create_full_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
+        node=create_full_random_tree(random_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
 
     return node
 def random_subtree(FUNCTIONS):
