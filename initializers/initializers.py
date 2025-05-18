@@ -166,8 +166,13 @@ def random_init(init_pop_size, TERMINALS):
         A list of Individual objects containing random trees and input sets based on the parameters provided.
     """
 
-    population = [[random.choice([0, 1]) for _ in range(len(TERMINALS))] for _ in range(init_pop_size)]
-
+    #population = [[random.choice([0, 1]) for _ in range(len(TERMINALS))] for _ in range(init_pop_size)]
+    population = []
+    for _ in range(init_pop_size):
+        individual = [random.choice([0, 1]) for _ in range(len(TERMINALS))]
+        if all(gene == 0 for gene in individual):
+            individual[random.randint(0, len(individual) - 1)] = 1
+        population.append(individual)
 
 
     return population
