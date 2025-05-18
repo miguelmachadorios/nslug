@@ -184,6 +184,7 @@ class NSLUG:
         # Initialize the population
         vic_keys = list(individual.TERMINALS.keys())
         
+        #[print(individual(tree).chromossome) for tree in  random_init(**self.pi_init_rand)]
         population = nslug_Population(
             [nslug_individual(tree, create_random_random_tree(6,self.FUNCTIONS,individual(tree).chromossome,self.CONSTANTS,0)) for tree in random_init(**self.pi_init_rand)]
         )
