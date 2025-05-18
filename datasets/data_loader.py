@@ -813,7 +813,7 @@ def load_parkinson(X_y=True):
             torch.from_numpy(df.values[:, -1]).float(),
         )
     else:
-        return df
+        return os.path.dirname(os.path.realpath(__file__))
 
 def load_gametes(epistatic_variables: int=2,number_variables: int=100, noise_ratio: float=0.1 ,  X_y=True):
     
