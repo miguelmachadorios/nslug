@@ -799,7 +799,11 @@ def load_bioav(X_y=True):
    
 
 def load_parkinson(X_y=True):
-    return os.path.dirname(os.path.realpath(__file__))
+    return         os.path.join(
+            os.path.dirname("/content/nslug/datasets"),
+            "data",
+            "parkinsons.csv",
+        )
     """df = pd.read_csv(
         os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
