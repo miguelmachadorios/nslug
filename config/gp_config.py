@@ -62,7 +62,7 @@ gp_solve_parameters = {
     "max_depth": 17,
     "n_elites": 1,
     "elitism": True,
-    "n_iter": 1000
+    "n_iter": 30
 }
 
 # GP parameters
