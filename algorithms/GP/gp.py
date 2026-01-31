@@ -112,7 +112,8 @@ class GP:
         ffunction=None,
         n_elites=1,
         depth_calculator=None,
-        n_jobs = 1
+        n_jobs = 1,
+        initial_population= None
     ):
         """
         Execute the Genetic Programming algorithm.
@@ -162,10 +163,14 @@ class GP:
         start = time.time()
 
         # Initialize the population
-        population = Population(
-            [Tree(tree) for tree in self.initializer(**self.pi_init)]
-        )
-
+        if initial_population is None:
+            population = Population(
+                [Tree(tree) for tree in self.initializer(**self.pi_init)]
+            )
+        else:
+            pop_init=[Tree(tree) for tree in self.initializer(**self.pi_init)]
+            pop_init.extend([Tree(tree) for tree in initial_population])
+            population = Population(pop_init)
         # evaluating the intial population
         population.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
 
@@ -305,21 +310,30 @@ class GP:
                     tree2_n_nodes=p2.node_count,
                 )
 
+                offspring=[]
                 # assuring the offspring do not exceed max_depth
                 if max_depth is not None:
-                    while (
-                        depth_calculator(offs1) > max_depth
-                        or depth_calculator(offs2) > max_depth
-                    ):
+                    offspring=[]
+                    while len(offspring)==0:
+                        
+                        d1=depth_calculator(offs1)
+                        d2=depth_calculator(offs2)
+                        if d1 <=max_depth:
+                            offspring.append(offs1)
+                        if d2 <=max_depth:
+                            offspring.append(offs2)
+                        if len(offspring)>0:
+                            break
+                        
                         offs1, offs2 = self.crossover(
                             p1.repr_,
                             p2.repr_,
                             tree1_n_nodes=p1.node_count,
                             tree2_n_nodes=p2.node_count,
                         )
-
+                else:
                 # grouping the offspring in a list to be added to the offspring population
-                offspring = [offs1, offs2]
+                    offspring = [offs1, offs2]
 
             else: # if mutation was chosen
                 # choosing a parent
@@ -393,10 +407,16 @@ class GP:
                 " ".join([str(f) for f in population.fit]),
                 log,
             ]
+        elif log == 5:
+            add_info = [
+                [ind.repr_  for ind in population.population],
+                [ind.fitness  for ind in population.population]
+            ]
         else:
             add_info = [self.elite.test_fitness, self.elite.node_count, log]
 
         logger(
+            
             log_path,
             generation,
             self.elite.fitness,
