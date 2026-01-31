@@ -26,6 +26,10 @@ def ga_delete(indiv,used_variables):
 
 
 def ga_insert(indiv):
-    p=1/len(indiv.TERMINALS)
-    return individual([1 if (value == 0 and random.random() < p) else value 
-            for value in indiv.encoder])
+    #p=1/len(indiv.TERMINALS)
+    if len(indiv.encoder) != sum(indiv.encoder):
+        p= 1 - (1 - 0.95) ** (1 /(len(indiv.encoder) - sum(indiv.encoder)))
+        return individual([1 if (value == 0 and random.random() < p) else value 
+                for value in indiv.encoder])
+    else:
+        return indiv
