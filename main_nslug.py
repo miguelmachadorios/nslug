@@ -32,8 +32,18 @@ from nslug.algorithms.GP.representations.tree_utils import tree_depth
 from nslug.config.nslug_config import *
 from nslug.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
 from nslug.utils.logger import log_settings
-from nslug.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
-from nslug.algorithms.GP.operators.mutators import mutate_tree_subtree
+from nslug.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min,extract_value)
+from nslug.algorithms.GP.operators.mutators import mutate_tree_subtree,gp_insert_add
+from datetime import datetime
+from nslug.main_gp import gp 
+from sklearn.tree import DecisionTreeClassifier
+#from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+import csv
+import pandas as pd
+import ast
+import shutil
 
 def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None, y_test: torch.Tensor = None,
        dataset_name: str = None,
@@ -42,6 +52,7 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
        p_xo: float = nslug_parameters['p_xo'],
        p_m: float = nslug_parameters['p_m'],
        elitism: bool = nslug_solve_parameters["elitism"], n_elites: int = nslug_solve_parameters["n_elites"],
+       max_depth: int  = nslug_solve_parameters["max_depth"],
        log_path: str = None, seed: int = nslug_parameters["seed"],
        log_level: int = nslug_solve_parameters["log"],
        verbose: int = nslug_solve_parameters["verbose"],
@@ -52,7 +63,9 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
        tournament_size: int = 2,
        test_elite: bool = nslug_solve_parameters["test_elite"],
        algorithm: str= nslug_solve_parameters["algorithm"],
-       pop_split: float= nslug_parameters["pop_split"]
+       pop_split: float= nslug_parameters["pop_split"],
+       gp_insert_mutation= "update",
+       file_run: str = None,save_last_ger: bool=False
        
        ):
 
@@ -122,9 +135,6 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
     #         Input Validation
     # ================================
 
-    # Setting the log_path
-    #if log_path is None:
-    log_path = os.path.join(os.getcwd(), "log", "nslug.csv")
 
     # validate_inputs(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, 
                     
@@ -138,7 +148,54 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
     assert 0 <= p_xo <= 1, "p_xo must be a number between 0 and 1"
     
     assert 0 <= p_m <= 1, "p_xo must be a number between 0 and 1"
+    
+    
+    if not file_run is None: 
+        assert os.path.isfile(file_run), f"File does not exist: {file_run}"
+        assert os.path.isfile(os.path.join(os.getcwd(), "log","nslug","nslug_settings.csv")), "File does not exist: nslug_settings"
+        
+        data=pd.read_csv(file_run,header =None,names = ["run","runid","dataset","seed","ger","fitness","time","time2","other","ga_individual","used_variables","used_variables2","gp_individual","individual_fitness"])
+        data=data[data["ger"] == data["ger"].max()] 
+        curr_iter=data["ger"].max()
+        assert n_iter>data["ger"].max(), f"Number of new generations: {n_iter} inferior than current number of current generations: {curr_iter}"
+        
+        model_length=len(ast.literal_eval(data["ga_individual"].iloc[0]))
+        
+        assert X_train.shape[1]==model_length, f"Number of columns in the new train data {X_train.shape[1]} is different of the number of columns of the current data {model_length}."
+        
+        runid_str = data["runid"].iloc[0]
+        
+        nslug_solve_parameters["initial_population"]=None
+        
+        df_settings = pd.read_csv(os.path.join(os.getcwd(), "log","nslug","nslug_settings.csv"),header =None,names = ["run","parameters"])
+        
+        param=df_settings[df_settings["run"] == runid_str]["parameters"].iloc[0]
+        
+        nslug_parameters["pop_size"]= extract_value(param,r"'pop_size':\s*([0-9]+)", int)
+        nslug_parameters["p_m"]=  extract_value(param,r"'p_m':\s*([0-9]*\.?[0-9]+)", float)
+        nslug_parameters["p_xo"]=  extract_value(param,r"'p_xo':\s*([0-9]*\.?[0-9]+)", float)
+        nslug_parameters["seed"]=  extract_value(param,r"'seed':\s*([0-9]+)", int)
+        nslug_parameters["pop_split"]=  extract_value(param,r"'pop_split':\s*([0-9]*\.?[0-9]+)", float)
+        
+        pop_size=nslug_parameters["pop_size"]
+        
+        nslug_solve_parameters["n_iter"]= n_iter-extract_value(param,r"'n_iter':\s*([0-9]+)", int)
+        nslug_solve_parameters["elitism"]= extract_value(param,r"'elitism':\s*(True|False)", lambda x: x == "True")
+        nslug_solve_parameters["n_elites"]= extract_value(param,r"'n_elites':\s*([0-9]+)", int)
+        nslug_solve_parameters["max_depth"]= extract_value(param,r"'max_depth':\s*([0-9]+)", int)
+        nslug_solve_parameters["log"]= extract_value(param,r"'log':\s*([0-9]+)", int)
+        nslug_solve_parameters["n_jobs"]= extract_value(param,r"'n_jobs':\s*([0-9]+)", int)
+        nslug_solve_parameters["algorithm"]= extract_value(param,r"'algorithm':\s*'([^']+)'", str)
+        
+        algorithm=nslug_solve_parameters["algorithm"]
+        print("Warning input parameters replaced by:")
+        print(", ".join(f"{k}={v}" for k, v in nslug_parameters.items())+ ", "+ ", ".join(f"{k}={v}" for k, v in nslug_solve_parameters.items()))
+        
+        nslug_solve_parameters["initial_population"]= [(ast.literal_eval(ga), ast.literal_eval(gp))  for ga, gp in zip(data["ga_individual"], data["gp_individual"])]
+        
 
+        
+        
     if test_elite and (X_test is None or y_test is None):
         warnings.warn("If test_elite is True, a test dataset must be provided. test_elite has been set to False")
         test_elite = False
@@ -148,7 +205,11 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
         warnings.warn("No dataset name set. Using default value of dataset_1.")
         dataset_name = "dataset_1"
 
-
+    # Setting the log_path
+    #if log_path is None:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{algorithm}_pop{pop_size}_iter{n_iter}_{timestamp}.csv"
+    log_path = os.path.join(os.getcwd(), "log", "nslug", filename)
 
     # creating a list with the valid available initializers
     valid_initializers = list(nslug_initializer_options)
@@ -177,14 +238,14 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
  
 
     #  *************** GP_PARAMETERS ***************
-
-    nslug_parameters["p_xo"] = p_xo
-    nslug_parameters["p_m"] = p_m
-    nslug_parameters["pop_size"] = pop_size
     
     nslug_parameters["mutator"] = mutate_tree_subtree(
         nslug_pi_init['init_depth'],  nslug_pi_random_init["TERMINALS"], nslug_pi_init['CONSTANTS'], nslug_pi_init['FUNCTIONS'],
         p_c=nslug_pi_init['p_c']
+    )
+    
+    nslug_parameters["insert_mutator"] = gp_insert_add(
+        gp_insert_mutation,  nslug_pi_random_init["TERMINALS"], nslug_pi_init['FUNCTIONS']
     )
     
     #ga_parameters["mutator"] = 
@@ -196,27 +257,44 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
     else:
         nslug_parameters["selector"] = tournament_selection_max(tournament_size)
         nslug_parameters["find_elit_func"] = get_best_max
-    nslug_parameters["seed"] = seed
-    nslug_parameters["pop_split"]=pop_split
+    
+    if file_run is None:
+        nslug_parameters["p_xo"] = p_xo
+        nslug_parameters["p_m"] = p_m
+        nslug_parameters["pop_size"] = pop_size    
+        nslug_parameters["seed"] = seed
+        nslug_parameters["pop_split"]=pop_split
+    
+
     #   *************** GP_SOLVE_PARAMETERS ***************
 
     nslug_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name]
-    nslug_solve_parameters["log"] = log_level
-    nslug_solve_parameters["verbose"] = verbose
-    nslug_solve_parameters["log_path"] = log_path
-    nslug_solve_parameters["elitism"] = elitism
-    nslug_solve_parameters["n_elites"] = n_elites
-    nslug_solve_parameters["n_iter"] = n_iter
     nslug_solve_parameters['depth_calculator'] = tree_depth(FUNCTIONS=nslug_pi_init['FUNCTIONS'])
     nslug_solve_parameters["ffunction"] = nslug_fitness_function_options[fitness_function]
-    nslug_solve_parameters["algorithm"]=algorithm
-    nslug_solve_parameters["n_jobs"] = n_jobs
+    nslug_solve_parameters["verbose"] = verbose
     nslug_solve_parameters["test_elite"] = test_elite
+    nslug_solve_parameters["log_path"] = log_path
+    nslug_solve_parameters["save_last_ger"]=save_last_ger
+    
+    
+    if file_run is None:
+        nslug_solve_parameters["n_iter"] = n_iter
+        nslug_solve_parameters["elitism"] = elitism
+        nslug_solve_parameters["n_elites"] = n_elites
+        nslug_solve_parameters["max_depth"] = max_depth
+        nslug_solve_parameters["log"] = log_level
+        nslug_solve_parameters["n_jobs"] = n_jobs
+        nslug_solve_parameters["algorithm"]=algorithm
+    
+
+    #   *************** COPYING FILE ***************    
+    if not file_run is None:
+        shutil.copy2(file_run, log_path)
 
     # ================================
     #       Running the Algorithm
     # ================================
-
+    
     optimizer = NSLUG(pi_init=nslug_pi_init,pi_init_rand=nslug_pi_random_init, **nslug_parameters)
     
     optimizer.solve(
@@ -228,9 +306,24 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
         **nslug_solve_parameters
         
     )
+    print("vais Tree")
+
+    # filtered_X_train =X_train[:,list(optimizer.elite.individual.chromossome.values())]
+    # filtered_X_test =X_test[:,list(optimizer.elite.individual.chromossome.values())]
     
+    final_tree = gp(X_train=X_train, y_train=y_train,
+                X_test=X_test, y_test=y_test,test_elite=True,
+                 pop_size=150, n_iter=50, max_depth=17,minimization=False,verbose=0, log_level=0
+                ,TERMINALS=optimizer.elite.individual.chromossome, init_depth=2,initial_population=[optimizer.elite.Tree.repr_]
+              )
+    #clf = DecisionTreeClassifier(max_depth=3, random_state=seed)
+    
+    #clf.fit(filtered_X_train, y_train)
+
+    #final_accuracy=accuracy_score(y_test,clf.predict(filtered_X_test))
+
     log_settings(
-        path=log_path[:-4] + "nslug_settings.csv",
+        path=os.path.join(os.getcwd(), "log","nslug","nslug_settings.csv"),
         settings_dict=[nslug_solve_parameters,
                        nslug_parameters,
                        nslug_pi_init,
@@ -238,8 +331,8 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
         unique_run_id=unique_run_id,
     )
 
-    return optimizer.elite
-
+    return optimizer.elite,final_tree,filename
+    #return optimizer.elite,final_tree
 
 if __name__ == "__main__":
     from nslug.datasets.data_loader import load_parkinson,load_gametes
@@ -252,12 +345,12 @@ if __name__ == "__main__":
 
     final_tree = nslug(X_train=X_train, y_train=y_train,
                     X_test=X_val, y_test=y_val,
-                    dataset_name='load_parkinson', pop_size=250, n_iter=50, n_jobs=2,minimization=False,algorithm="split_population",pop_split=0.3)
+                    dataset_name='load_parkinson', pop_size=250, n_iter=50, n_jobs=2,minimization=False,algorithm="standard",pop_split=0.3)
     
     #print(final_tree.Tree.fitness)
     #print(final_tree.Tree.repr_)
     #print(final_tree.individual.chromossome)
     #print(final_tree.individual.encoder)
-    final_tree.Tree.print_tree_representation()
-    predictions = final_tree.Tree.predict(X_test)
-    print(float(rmse(y_true=y_test, y_pred=predictions)))
+    #final_tree.Tree.print_tree_representation()
+    #predictions = final_tree.Tree.predict(X_test)
+    #print(float(rmse(y_true=y_test, y_pred=predictions)))

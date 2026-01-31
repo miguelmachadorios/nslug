@@ -57,7 +57,9 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
        tree_constants: list = [float(key.replace("constant_", "").replace("_", "-")) for key in CONSTANTS],
        tournament_size: int = 2,
        test_elite: bool = gp_solve_parameters["test_elite"],
-       TERMINALS: dict = None
+       TERMINALS: dict = None,
+       caller_unique_id = None,
+       initial_population: list = None
        ):
 
     """
@@ -204,7 +206,7 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
             if len(valid_constants) > 1 else valid_constants[0])
 
     gp_pi_init["p_c"] = prob_const
-    gp_pi_init["init_pop_size"] = pop_size # TODO: why init pop_size != than rest?
+    gp_pi_init["init_pop_size"] = pop_size -len(initial_population) if initial_population is not None else 0 # TODO: why init pop_size != than rest?
     gp_pi_init["init_depth"] = init_depth
 
     #  *************** GP_PARAMETERS ***************
@@ -227,7 +229,7 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
     gp_parameters["seed"] = seed
     #   *************** GP_SOLVE_PARAMETERS ***************
 
-    gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name]
+    gp_solve_parameters['run_info'] = [algo, unique_run_id, dataset_name,caller_unique_id]
     gp_solve_parameters["log"] = log_level
     gp_solve_parameters["verbose"] = verbose
     gp_solve_parameters["log_path"] = log_path
@@ -239,7 +241,8 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
     gp_solve_parameters["ffunction"] = fitness_function_options[fitness_function]
     gp_solve_parameters["n_jobs"] = n_jobs
     gp_solve_parameters["test_elite"] = test_elite
-
+    
+    if not initial_population is None: gp_solve_parameters["initial_population"]=initial_population
     # ================================
     #       Running the Algorithm
     # ================================

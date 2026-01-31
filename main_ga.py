@@ -36,6 +36,7 @@ from nslug.utils.utils import (get_terminals, validate_inputs, get_best_max, get
 from nslug.main_gp import gp
 
 
+
 def ga(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None, y_test: torch.Tensor = None,
        dataset_name: str = None,
        pop_size: int = ga_parameters["pop_size"],
@@ -220,11 +221,11 @@ def ga(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
     )
 
     # log_settings(
-    #     path=log_path[:-4] + "GA_settings.csv",
-    #     settings_dict=[ga_solve_parameters,
-    #                    ga_parameters,
-    #                    settings_dict],
-    #     unique_run_id=unique_run_id,
+    #      path=log_path[:-4] + "slug_settings.csv",
+    #      settings_dict=[ga_solve_parameters,
+    #                     ga_parameters,
+    #                     settings_dict],
+    #      unique_run_id=unique_run_id,
     # )
 
     return optimizer.elite
