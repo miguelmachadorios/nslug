@@ -47,7 +47,7 @@ class Population_ga:
         self.size = len(pop)
         self.fit = None
 
-    def evaluate(self, ffunction, X, y, n_jobs=1):
+    def evaluate(self, ffunction, X, y, n_jobs=1, caller_id= None):
         """
         Evaluates the population given a certain fitness function, input data (X), and target data (y).
 
@@ -69,7 +69,7 @@ class Population_ga:
         None
         """
     
-        self.fit = [ffunction(X_train=X,y_train=y,pop_size=15, n_iter=10, max_depth=None,minimization=False,verbose=0, TERMINALS=individual.chromossome) 
+        self.fit = [ffunction(X_train=X,y_train=y,pop_size=100, n_iter=30, max_depth=None,minimization=False,verbose=0, TERMINALS=individual.chromossome,caller_unique_id=caller_id) 
                     for individual in self.population]
 
         # Assign individuals' fitness

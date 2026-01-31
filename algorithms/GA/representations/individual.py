@@ -52,7 +52,7 @@ class individual:
         self.model_repr_= None
 
     
-    def evaluate(self, ffunction, X, y, testing=False, new_data = False):
+    def evaluate(self, ffunction, X, y, testing=False, new_data = False, caller_id= None ):
         """
         Evaluates the tree given a fitness function, input data (X), and target data (y).
 
