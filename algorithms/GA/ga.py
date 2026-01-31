@@ -167,7 +167,7 @@ class GA:
 
         # evaluating the intial population
 #-> aqui vais correr o GP
-        population.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
+        population.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs, caller_id= run_info[1])
 
         end = time.time()
 
@@ -176,7 +176,7 @@ class GA:
 
         # testing the elite on testing data, if applicable
         if test_elite:
-            self.elite.evaluate(ffunction, X=X_test, y=y_test, testing=True)
+            self.elite.evaluate(ffunction, X=X_test, y=y_test, testing=True,caller_id= run_info[1])
 
         # logging the results if the log level is not 0
         log=0
@@ -203,12 +203,11 @@ class GA:
             offs_pop, start = self.evolve_population(
                 population,
                 ffunction,
-                max_depth,
-                depth_calculator,
                 elitism,
                 X_train,
                 y_train,
-                n_jobs=n_jobs
+                n_jobs=n_jobs,
+                caller_id=run_info[1]
             )
             # replacing the population with the offspring population (P = P')
             population = offs_pop
@@ -244,12 +243,11 @@ class GA:
         self,
         population,
         ffunction,
-        max_depth,
-        depth_calculator,
         elitism,
         X_train,
         y_train,
-        n_jobs=1
+        n_jobs=1,
+        caller_id=None
     ):
         """
         Evolve the population for one iteration (generation).
@@ -321,64 +319,64 @@ class GA:
         #offs_pop = Population(offs_pop)
         # evaluating the offspring population
         offs_pop=Population_ga(offs_pop)
-        offs_pop.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
+        offs_pop.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs,caller_id=caller_id)
 
         # retuning the offspring population and the time control variable
         return offs_pop, start
 
-    # def log_generation(
-    #     self, generation, population, elapsed_time, log, log_path, run_info
-    # ):
-    #     """
-    #     Log the results for the current generation.
+    def log_generation(
+        self, generation, population, elapsed_time, log, log_path, run_info
+    ):
+        """
+        Log the results for the current generation.
 
-    #     Args:
-    #         generation (int): Current generation (iteration) number.
-    #         population (Population): Current population.
-    #         elapsed_time (float): Time taken for the process.
-    #         log (int): Logging level.
-    #         log_path (str): Path to save logs.
-    #         run_info (list): Information about the current run.
+        Args:
+            generation (int): Current generation (iteration) number.
+            population (Population): Current population.
+            elapsed_time (float): Time taken for the process.
+            log (int): Logging level.
+            log_path (str): Path to save logs.
+            run_info (list): Information about the current run.
 
-    #     Returns:
-    #         None
-    #     """
-    #     if log == 2:
-    #         add_info = [
-    #             self.elite.test_fitness,
-    #             self.elite.node_count,
-    #             float(niche_entropy([ind.repr_ for ind in population.population])),
-    #             np.std(population.fit),
-    #             log,
-    #         ]
-    #     elif log == 3:
-    #         add_info = [
-    #             self.elite.test_fitness,
-    #             self.elite.node_count,
-    #             " ".join([str(ind.node_count) for ind in population.population]),
-    #             " ".join([str(f) for f in population.fit]),
-    #             log,
-    #         ]
-    #     elif log == 4:
-    #         add_info = [
-    #             self.elite.test_fitness,
-    #             self.elite.node_count,
-    #             float(niche_entropy([ind.repr_ for ind in population.population])),
-    #             np.std(population.fit),
-    #             " ".join([str(ind.node_count) for ind in population.population]),
-    #             " ".join([str(f) for f in population.fit]),
-    #             log,
-    #         ]
-    #     else:
-    #         add_info = [self.elite.test_fitness, self.elite.node_count, log]
+        Returns:
+            None
+        """
+        if log == 2:
+            add_info = [
+                self.elite.test_fitness,
+                self.elite.node_count,
+                float(niche_entropy([ind.repr_ for ind in population.population])),
+                np.std(population.fit),
+                log,
+            ]
+        elif log == 3:
+            add_info = [
+                self.elite.test_fitness,
+                self.elite.node_count,
+                " ".join([str(ind.node_count) for ind in population.population]),
+                " ".join([str(f) for f in population.fit]),
+                log,
+            ]
+        elif log == 4:
+            add_info = [
+                self.elite.test_fitness,
+                self.elite.node_count,
+                float(niche_entropy([ind.repr_ for ind in population.population])),
+                np.std(population.fit),
+                " ".join([str(ind.node_count) for ind in population.population]),
+                " ".join([str(f) for f in population.fit]),
+                log,
+            ]
+        else:
+            add_info = [self.elite.test_fitness, self.elite.node_count, log]
 
-    #     logger(
-    #         log_path,
-    #         generation,
-    #         self.elite.fitness,
-    #         elapsed_time,
-    #         float(population.nodes_count),
-    #         additional_infos=add_info,
-    #         run_info=run_info,
-    #         seed=self.seed,
-    #     )
+        logger(
+            log_path,
+            generation,
+            self.elite.fitness,
+            elapsed_time,
+            float(population.nodes_count),
+            additional_infos=add_info,
+            run_info=run_info,
+            seed=self.seed,
+        )
