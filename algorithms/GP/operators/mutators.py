@@ -31,7 +31,7 @@ from nslug.utils.utils import create_custom_list
 from nslug.algorithms.GP.representations.tree import Tree
 from nslug.algorithms.GP.representations.tree_utils import (create_grow_random_tree,
                                                                 random_subtree,
-                                                                substitute_subtree, tree_depth,create_full_random_tree_list_mode)
+                                                                substitute_subtree, tree_depth,create_full_random_tree_list_mode,used_terminals,find_all_paths,replace_at_path,last_node_depth,last_parent_depth)
 
 
 # Function to perform mutation on a tree.
@@ -221,8 +221,10 @@ def mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c):
     # getting the subtree substitution function and the random subtree selection function
     subtree_substitution = substitute_subtree(FUNCTIONS=FUNCTIONS)
     random_subtree_picker = random_subtree(FUNCTIONS=FUNCTIONS)
+    last_node_depth_picker = last_node_depth(FUNCTIONS=FUNCTIONS)
+    last_parent_depth_picker = last_parent_depth(FUNCTIONS=FUNCTIONS)    
 
-    def inner_mut(tree1, num_of_nodes=None):
+    def inner_mut(tree1, num_of_nodes=None, c=0):
         """
         Mutates a subtree in the given tree representation by replacing a randomly selected subtree.
 
@@ -248,14 +250,53 @@ def mutate_tree_subtree(max_depth, TERMINALS, CONSTANTS, FUNCTIONS, p_c):
             mutation_point = random_subtree_picker(
                 tree1, num_of_nodes=num_of_nodes
             )
+            
+            #print(tree_depth(Tree.FUNCTIONS)(mutation_point))
+            #subtree_depth=random.randint(1,tree_depth(Tree.FUNCTIONS)(mutation_point))
+
+            
+            if isinstance(tree1, tuple):
+                a=last_node_depth_picker(tree1,mutation_point)
+                n_max=17-last_node_depth_picker(tree1,mutation_point)+1
+            else:
+                a=last_parent_depth_picker(tree1,mutation_point)
+                n_max=17-tree_depth(Tree.FUNCTIONS)(tree1)
+            
+            if c>0:
+                print(tree_depth(Tree.FUNCTIONS)(tree1))
+                print(mutation_point)
+                print(tree_depth(Tree.FUNCTIONS)(mutation_point))
+                print(f'no inicio da ultima arvore: {a}')
+                print(f'profundidade permitida: {n_max}')
+            subtree_depth=random.randint(1,max(n_max,1))
+            #max_depth
+            
+            
             # gettubg a bew subtree
             new_subtree = create_grow_random_tree(
-                max_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c
+                subtree_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=p_c
             )
             # replacing the tree in mutation point for the new substring
             new_tree1 = subtree_substitution(
                 tree1, mutation_point, new_subtree
             )
+            if c>0:
+                print("-----------------------arvore original----------------------")
+                print(tree1)
+                print("--------------depth arvore original----------------")
+                print(tree_depth(Tree.FUNCTIONS)(tree1))
+                print("--------------ponto corte----------------")
+                print(mutation_point)
+                print("--------------depth ponto corte----------------")
+                print(tree_depth(Tree.FUNCTIONS)(mutation_point))
+                print("--------------nova subarvore----------------")
+                print(new_subtree)
+                print("--------------depth nova subarvore----------------")
+                print(tree_depth(Tree.FUNCTIONS)(new_subtree))
+                print("--------------arvore final----------------")
+                print(new_tree1)
+                print("--------------depth arvore final----------------")
+                print(tree_depth(Tree.FUNCTIONS)(new_tree1))
             return new_tree1
         else:
             return tree1 # if tree1 is a terminal
@@ -270,3 +311,36 @@ def gp_insert(tree,used_terminals):
     new_tree=Tree(create_full_random_tree_list_mode(tree_depth+1,tree.FUNCTIONS,terminal_list2))
 
     return new_tree
+
+def gp_insert_add(algorithm,TERMINALS, FUNCTIONS):
+    
+    if algorithm=="update":
+        def gp_insert(tree,new_terminals):
+            
+            used_terminal=used_terminals(tree.repr_, TERMINALS)
+            diff_keys = set(new_terminals) - set(used_terminal)
+            expr=tree.repr_
+            for z in diff_keys:
+                y = random.choice(list(used_terminal.keys()))
+                paths = find_all_paths(tree.repr_, y)
+                if not paths:
+                    continue
+                chosen_path = random.choice(paths)
+                func_name = random.choice(list(FUNCTIONS.keys()))
+                new_subtree = (func_name, y, z)
+                expr = replace_at_path(expr, chosen_path, new_subtree)
+            new_tree=Tree(expr)
+
+            return new_tree
+        return gp_insert
+    if algorithm=="create_new":
+        def gp_insert(tree,used_terminals):
+            
+            tree_depth=math.ceil(math.log(len(used_terminals), 2))
+            terminal_list=create_custom_list(list(used_terminals.keys()),tree_depth)
+            terminal_list2=terminal_list.copy()
+            new_tree=Tree(create_full_random_tree_list_mode(tree_depth+1,tree.FUNCTIONS,terminal_list2))
+
+            return new_tree
+        return gp_insert
+    
