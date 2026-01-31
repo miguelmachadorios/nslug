@@ -185,6 +185,7 @@ def create_random_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
         node=create_full_random_tree(random_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
 
     return node
+
 def random_subtree(FUNCTIONS):
     """
     Creates a function that selects a random subtree from a given tree representation.
@@ -533,6 +534,81 @@ def tree_depth(FUNCTIONS):
     return depth
 
 
+def last_node_depth(FUNCTIONS):
+    """
+    Returns a function that finds the depth of the LAST occurrence
+    of a structurally matching subtree in a depth-first traversal.
+    """
+
+    def depth_node(tree, target, current_depth=1):
+        """
+        Parameters
+        ----------
+        tree : tuple or terminal
+            Tree to search
+        target : tuple or terminal
+            Subtree to match (structural equality)
+        current_depth : int
+            Current traversal depth
+
+        Returns
+        -------
+        int or None
+            Depth of the last occurrence, or None if not found
+        """
+
+        last_found = None
+
+        # Check current node first
+        if tree == target:
+            last_found = current_depth
+
+        # Recurse if internal node
+        if isinstance(tree, tuple):
+            arity = FUNCTIONS[tree[0]]["arity"]
+
+            # Left child
+            left_result = depth_node(tree[1], target, current_depth + 1)
+            if left_result is not None:
+                last_found = left_result
+
+            # Right child (if binary)
+            if arity == 2:
+                right_result = depth_node(tree[2], target, current_depth + 1)
+                if right_result is not None:
+                    last_found = right_result
+
+        return last_found
+
+    return depth_node
+
+def last_parent_depth(FUNCTIONS):
+    def depth_parent(tree, target, current_depth=1):
+        max_parent = None
+
+        if isinstance(tree, tuple):
+            arity = FUNCTIONS[tree[0]]["arity"]
+
+            # Left child
+            if tree[1] == target:
+                max_parent = current_depth
+            else:
+                res = depth_parent(tree[1], target, current_depth + 1)
+                if res is not None:
+                    max_parent = res
+
+            # Right child
+            if arity == 2:
+                if tree[2] == target:
+                    max_parent = current_depth
+                else:
+                    res = depth_parent(tree[2], target, current_depth + 1)
+                    if res is not None:
+                        max_parent = res
+
+        return max_parent
+    return depth_parent
+
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
     """
     Evaluates a tree genotype on input vectors.
@@ -707,3 +783,27 @@ def create_full_random_tree_list_mode(depth, FUNCTIONS, terminal_list):
         node = (node, left_subtree, right_subtree)
 
     return node
+
+
+def find_all_paths(tree, target):
+    #Return all index paths to occurrences of target in nested tuples
+    paths = []
+    def recurse(subtree, path):
+        if isinstance(subtree, tuple):
+            for i, elem in enumerate(subtree):
+                recurse(elem, path + (i,))
+        elif subtree == target:
+            paths.append(path)
+    recurse(tree, ())
+    return paths
+
+
+def replace_at_path(tree, path, new_value):
+    #Return a new tuple with the element at 'path' replaced by new_value
+    if not path:
+        return new_value
+    i0 = path[0]
+    return tuple(
+        replace_at_path(tree[i], path[1:], new_value) if i == i0 else tree[i]
+        for i in range(len(tree))
+    )
