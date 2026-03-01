@@ -28,6 +28,7 @@ import time
 import copy
 import numpy as np
 import torch
+from datetime import datetime
 from nslug.algorithms.GP.representations.population import Population
 from nslug.algorithms.GP.representations.tree import Tree
 from nslug.algorithms.NSLUG.representations.nslug_population import nslug_Population
@@ -42,6 +43,7 @@ from nslug.algorithms.GA.operators.crossover_operators import single_point_cross
 from nslug.algorithms.GA.operators.mutators import ga_delete,ga_insert,ga_mutation
 #from nslug.algorithms.GP.operators.mutators import gp_insert,gp_insert_new
 from nslug.initializers.initializers import random_init
+from nslug.utils.utils import normalize_symbolic
 
 class NSLUG:
     def __init__(
@@ -135,7 +137,8 @@ class NSLUG:
         depth_calculator=None,
         n_jobs = 1,
         algorithm="standard",
-        initial_population= None,save_last_ger=False
+        initial_population= None,
+        only_last_generation=False
     ):
         """
         Execute the Genetic Programming algorithm.
@@ -201,12 +204,6 @@ class NSLUG:
             
         population.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
         
-        for  ind in population.population:
-            if ind.Tree.depth>17: 
-                print("estas logo no inicio")
-                print(ind.Tree.repr_)
-                print(ind.Tree.depth)
-        
         end = time.time()
         
         # getting the elite(s) from the initial population
@@ -218,7 +215,7 @@ class NSLUG:
 
         # # logging the results if the log level is not 0
        
-        if log != 0 and initial_population is None and not save_last_ger:
+        if log != 0 and initial_population is None and not only_last_generation:
             self.log_generation(
                     0, population, end - start, log, log_path, run_info
                 )
@@ -266,7 +263,7 @@ class NSLUG:
             
             # logging the results if log != 0
             if log != 0:
-                if (save_last_ger and it==n_iter) or not save_last_ger:
+                if (only_last_generation and it==n_iter) or not only_last_generation:
                     self.log_generation(
                         it, population, end - start, log, log_path, run_info
                     )
@@ -427,6 +424,8 @@ class NSLUG:
         else:
             while len(offs_pop) < self.pop_size*self.pop_split:
                 # choosing between crossover and mutation
+             
+               
                 p1, p2 = self.selector(population,True), self.selector(population,True)
                     # make sure that the parents are different
                 while p1 == p2:
@@ -439,6 +438,7 @@ class NSLUG:
                 # choose two parents
                 
                 # generate offspring from the chosen parents
+                   
                     offs1, offs2 = self.crossover(
                         p1_tmp.Tree.repr_,
                         p2_tmp.Tree.repr_,
@@ -475,39 +475,29 @@ class NSLUG:
                     else:
                         offspring= [nslug_individual( [1 if key in used_terminals(offs1,individual.TERMINALS) else 0 for key in individual.TERMINALS],offs1)
                         ,nslug_individual( [1 if key in used_terminals(offs2,individual.TERMINALS) else 0 for key in individual.TERMINALS],offs2)]        
-                    
+                   
                     # grouping the offspring in a list to be added to the offspring population
                     #offspring = [p1_tmp, p2_tmp]
-                    for  ind in offspring:
-                        if ind.Tree.depth>17: 
-                            print("estas logo no ecrossover")
-                            print(ind.Tree.repr_)
-                            print(ind.Tree.depth)                    
-
+                    
                 else: # if mutation was chosen
                     
                     # generating a mutated offspring from the parent
                     c=0
-                    offs1 = self.mutator(p1_tmp.Tree.repr_, num_of_nodes=p1_tmp.Tree.node_count, c=c)
-                    
-                    
+                    offs1 = self.mutator(p1_tmp.Tree.repr_, num_of_nodes=p1_tmp.Tree.node_count)
+                  
                     # making sure the offspring does not exceed max_depth
                     if max_depth is not None:
-                        while depth_calculator(offs1) > max_depth:
-                            c=c+1
-                            print(c)
-                            offs1 = self.mutator(p1_tmp.Tree.repr_, num_of_nodes=p1_tmp.Tree.node_count,c=c)
-
-
+                        #while depth_calculator(offs1) > max_depth:
+                        if depth_calculator(offs1) > max_depth:
+                            #offs1=p1_tmp.Tree.repr_
+                            offs1 = self.mutator(p1_tmp.Tree.repr_, num_of_nodes=p1_tmp.Tree.node_count)
+                            #c=c+1
+                            #print(c)
                     # adding the offspring to a list, to be added to the offspring population
                     p1_tmp=nslug_individual( [1 if key in used_terminals(offs1,individual.TERMINALS) else 0 for key in individual.TERMINALS],offs1)
                 
                     offspring = [p1_tmp]
-                    for  ind in offspring:
-                        if ind.Tree.depth>17: 
-                            print("estas logo no emutation")
-                            print(ind.Tree.repr_)
-                            print(ind.Tree.depth)    
+                  
                     
             # adding the offspring as instances of Tree to the offspring population
                 offs_pop.extend(offspring)
@@ -531,35 +521,26 @@ class NSLUG:
                 # generate offspring from the chosen parents
                     
                     #if sum(p1_tmp.encoder)!=1 or sum(p2_tmp.encoder)!=1: 
-               
+                  
                     p1_tmp, p2_tmp  = self.ga_crossover(p1_tmp,p2_tmp)
                    
 
                     offs1=create_random_random_tree(6,self.FUNCTIONS,p1_tmp.chromossome,self.CONSTANTS,0)
                     offs2=create_random_random_tree(6,self.FUNCTIONS,p2_tmp.chromossome,self.CONSTANTS,0)
-                    
                    
                 if random.random() < self.p_m: # if crossover is selected
                 # generate offspring from the chosen parents
-                   
+                    
                     p1_tmp=self.ga_mutator(p1_tmp)
                     p2_tmp=self.ga_mutator(p2_tmp)
                     
                     offs1=create_random_random_tree(6,self.FUNCTIONS,p1_tmp.chromossome,self.CONSTANTS,0)
                     offs2=create_random_random_tree(6,self.FUNCTIONS,p2_tmp.chromossome,self.CONSTANTS,0)
-                    
+                  
                 p1_tmp=nslug_individual( p1_tmp.encoder,create_random_random_tree(6,self.FUNCTIONS,p1_tmp.chromossome,self.CONSTANTS,0))
                 p2_tmp=nslug_individual( p2_tmp.encoder,create_random_random_tree(6,self.FUNCTIONS,p2_tmp.chromossome,self.CONSTANTS,0))                    
             # adding the offspring as instances of Tree to the offspring population
-                
-                if p1_tmp.Tree.depth>17: 
-                        print("estas logo no lado do ga p1")
-                        print(p1_tmp.Tree.repr_)
-                        print(p1_tmp.Tree.depth) 
-                if p2_tmp.Tree.depth>17: 
-                        print("estas logo no lado do ga p2")
-                        print(p2_tmp.Tree.repr_)
-                        print(p2_tmp.Tree.depth) 
+               
                 offs_pop.extend([p1_tmp,p2_tmp])
                
  
@@ -569,14 +550,16 @@ class NSLUG:
 
         # turning the offspring population into an instance of Population
         offs_pop = nslug_Population(offs_pop)
+        
         offs_pop.evaluate(ffunction, X=X_train, y=y_train, n_jobs=n_jobs)
-
+      
 
         # evaluating the offspring population
+      
         for slug_ind in offs_pop.population:
             slug_ind.individual= ga_delete(slug_ind.individual,used_terminals(slug_ind.Tree.repr_,slug_ind.individual.TERMINALS))
         
-
+      
         # retuning the offspring population and the time control variable
         return offs_pop, start
 
@@ -632,15 +615,16 @@ class NSLUG:
                     self.elite.Tree.fitness,
                     elapsed_time,
                     self.elite.Tree.node_count,
+                    #float(population.nodes_count),
                     additional_infos = [
                         
                         {vic_keys[i]: ind.individual.TERMINALS[vic_keys[i]] for i in range(len(ind.individual.encoder)) if ind.individual.encoder[i] == 1},  
                         ind.individual.encoder,
-                        ind.individual.chromossome,
-                        used_terminals(ind.Tree.repr_,ind.individual.TERMINALS),
-                        ind.Tree.repr_,
+                        normalize_symbolic(ind.individual.chromossome),
+                        normalize_symbolic(used_terminals(ind.Tree.repr_,ind.individual.TERMINALS)),
+                        normalize_symbolic(ind.Tree.repr_),
                         ind.Tree.node_count,
-                        ind.Tree.fitness
+                        ind.Tree.fitness.item()
                         
                     ],
                     run_info=run_info,
