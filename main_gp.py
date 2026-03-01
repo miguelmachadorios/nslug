@@ -210,7 +210,7 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
             if len(valid_constants) > 1 else valid_constants[0])
 
     gp_pi_init["p_c"] = prob_const
-    gp_pi_init["init_pop_size"] = pop_size -len(initial_population) if initial_population is not None else 0 # TODO: why init pop_size != than rest?
+    gp_pi_init["init_pop_size"] = pop_size -len(initial_population) if initial_population is not None else pop_size # TODO: why init pop_size != than rest?
     gp_pi_init["init_depth"] = init_depth
 
     #  *************** GP_PARAMETERS ***************
@@ -289,3 +289,4 @@ if __name__ == "__main__":
     final_tree.print_tree_representation()
     predictions = final_tree.predict(X_test)
     print(float(rmse(y_true=y_test, y_pred=predictions)))
+
