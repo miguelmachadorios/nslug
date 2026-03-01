@@ -114,21 +114,25 @@ def logger(
     None
     """
     if not os.path.isdir(os.path.dirname(path)):
-        os.mkdir(os.path.dirname(path))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "a", newline="") as file:
         writer = csv.writer(file)
         infos = copy(run_info) if run_info is not None else []
         infos.extend([seed, generation, float(elite_fit), timing, nodes])
+        
+        if not isinstance(additional_infos[0], list):
+            if additional_infos is not None:
+                try:
+                    additional_infos[0] = float(additional_infos[0])
+                except:
+                    additional_infos[0] = "None"
+                infos.extend(additional_infos)
 
-        if additional_infos is not None:
-            try:
-                additional_infos[0] = float(additional_infos[0])
-            except:
-                additional_infos[0] = "None"
-            infos.extend(additional_infos)
-
-        writer.writerow(infos)
-
+            writer.writerow(infos)
+        else:
+            for item in zip(*additional_infos):
+                writer.writerow(infos + list(item))
+                
 
 def drop_experiment_from_logger(experiment_id: str or int, log_path: str) -> None:
     """

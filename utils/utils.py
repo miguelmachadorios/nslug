@@ -28,6 +28,7 @@ from nslug.algorithms.GP.representations.tree_utils import (create_full_random_t
                                                                 create_grow_random_tree)
 from nslug.algorithms.GP.representations.tree import Tree
 from sklearn.metrics import root_mean_squared_error
+import re
 
 
 def protected_div(x1, x2):
@@ -328,7 +329,7 @@ def get_best_max(population, n_elites,method: str = "GP"):
             elite = population.population[np.argmax(population.fit)]
             return [elite], elite
     elif method=="slug":
-        fitness_array = np.array([obj.fitness for obj in population.fit])
+        fitness_array = np.array([obj.fitness for obj in population.fit], dtype=object)
         
         if n_elites > 1:
             idx = np.argpartition(fitness_array, -n_elites)
@@ -340,7 +341,7 @@ def get_best_max(population, n_elites,method: str = "GP"):
             return [elite], elite    
     
     elif method=="nslug":
-        fitness_array = np.array([obj.Tree.fitness for obj in population.fit])
+        fitness_array = np.array([obj.Tree.fitness for obj in population.fit], dtype=object)
         
         if n_elites > 1:
             idx = np.argpartition(fitness_array, -n_elites)
@@ -613,7 +614,7 @@ def validate_inputs(X_train, y_train, X_test, y_test, pop_size, n_iter, elitism,
     if not isinstance(log, int):
         raise TypeError("log_level must be an int")
 
-    assert 0 <= log <= 4, "log_level must be between 0 and 4"
+    assert 0 <= log <= 5, "log_level must be between 0 and 5"
 
     if not isinstance(verbose, int):
         raise TypeError("verbose level must be an int")
@@ -736,3 +737,25 @@ def create_custom_list(L, n):
     random.shuffle(result)
     
     return result
+
+
+def extract_value(param,pattern, cast=str):
+    match = re.search(pattern, param)
+    if match:
+        return cast(match.group(1))
+    return None
+
+
+def normalize_symbolic(obj):
+    if isinstance(obj, np.str_):
+        return obj.item()          # fastest possible conversion
+    if isinstance(obj, tuple):
+        return tuple(normalize_symbolic(x) for x in obj)
+    if isinstance(obj, list):
+        return [normalize_symbolic(x) for x in obj]
+    if isinstance(obj, dict):
+        return {
+            normalize_symbolic(k): normalize_symbolic(v)
+            for k, v in obj.items()
+        }
+    return obj
