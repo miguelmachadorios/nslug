@@ -185,7 +185,6 @@ def create_random_random_tree(depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c=0.3):
         node=create_full_random_tree(random_depth, FUNCTIONS, TERMINALS, CONSTANTS, p_c)
 
     return node
-
 def random_subtree(FUNCTIONS):
     """
     Creates a function that selects a random subtree from a given tree representation.
@@ -533,7 +532,6 @@ def tree_depth(FUNCTIONS):
 
     return depth
 
-
 def last_node_depth(FUNCTIONS):
     """
     Returns a function that finds the depth of the LAST occurrence
@@ -608,7 +606,7 @@ def last_parent_depth(FUNCTIONS):
 
         return max_parent
     return depth_parent
-
+    
 def _execute_tree(repr_, X, FUNCTIONS, TERMINALS, CONSTANTS):
     """
     Evaluates a tree genotype on input vectors.
