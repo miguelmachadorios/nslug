@@ -65,7 +65,8 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
        algorithm: str= nslug_solve_parameters["algorithm"],
        pop_split: float= nslug_parameters["pop_split"],
        gp_insert_mutation= "update",
-       file_run: str = None,save_last_ger: bool=False
+       file_run: str = None,
+       only_last_generation: bool= False
        
        ):
 
@@ -208,8 +209,10 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
     # Setting the log_path
     #if log_path is None:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{algorithm}_pop{pop_size}_iter{n_iter}_{timestamp}.csv"
-    log_path = os.path.join(os.getcwd(), "log", "nslug", filename)
+    filename = f"{algorithm}_pop{pop_size}_iter{n_iter}_seed{seed}_{timestamp}.csv"
+    BASE_DIR=os.path.dirname(os.path.abspath(__file__))
+    log_path = os.path.join(BASE_DIR, "log", "nslug", filename)
+    #log_path = os.path.join(os.getcwd(), "log", "nslug", filename)
 
     # creating a list with the valid available initializers
     valid_initializers = list(nslug_initializer_options)
@@ -274,8 +277,7 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
     nslug_solve_parameters["verbose"] = verbose
     nslug_solve_parameters["test_elite"] = test_elite
     nslug_solve_parameters["log_path"] = log_path
-    nslug_solve_parameters["save_last_ger"]=save_last_ger
-    
+    nslug_solve_parameters["only_last_generation"]=only_last_generation
     
     if file_run is None:
         nslug_solve_parameters["n_iter"] = n_iter
@@ -323,7 +325,7 @@ def nslug(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = N
     #final_accuracy=accuracy_score(y_test,clf.predict(filtered_X_test))
 
     log_settings(
-        path=os.path.join(os.getcwd(), "log","nslug","nslug_settings.csv"),
+        path=os.path.join(BASE_DIR, "log","nslug","nslug_settings.csv"),
         settings_dict=[nslug_solve_parameters,
                        nslug_parameters,
                        nslug_pi_init,

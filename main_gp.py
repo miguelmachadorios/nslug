@@ -33,7 +33,7 @@ from nslug.config.gp_config import *
 from nslug.selection.selection_algorithms import tournament_selection_max, tournament_selection_min
 from nslug.utils.logger import log_settings
 from nslug.utils.utils import (get_terminals, validate_inputs, get_best_max, get_best_min)
-
+from datetime import datetime
 
 # todo: would not be better to first log the settings and then perform the algorithm?
 
@@ -130,7 +130,11 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
 
     # Setting the log_path
     if log_path is None:
-        log_path = os.path.join(os.getcwd(), "log", "gp.csv")
+        #log_path = os.path.join(os.getcwd(), "log", "gp.csv")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"gp_pop{pop_size}_iter{n_iter}_{timestamp}.csv"
+        BASE_DIR=os.path.dirname(os.path.abspath(__file__))
+        log_path = os.path.join(BASE_DIR, "log", "gp", filename)
 
     validate_inputs(X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, pop_size=pop_size, n_iter=n_iter,
                     elitism=elitism, n_elites=n_elites, init_depth=init_depth, log_path=log_path, prob_const=prob_const,
@@ -258,7 +262,7 @@ def gp(X_train: torch.Tensor, y_train: torch.Tensor, X_test: torch.Tensor = None
     )
 
     log_settings(
-        path=log_path[:-4] + "_settings.csv",
+        path=os.path.join(BASE_DIR, "log","gp","gp_settings.csv"),
         settings_dict=[gp_solve_parameters,
                        gp_parameters,
                        gp_pi_init,
